@@ -27,6 +27,9 @@
     <ClInclude Include="BlurEffectSource.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -56,5 +59,10 @@
     <Text Include="readme.txt">
       <Filter>Resources</Filter>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="BlurPlugin.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

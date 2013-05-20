@@ -18,6 +18,7 @@
 
 #include "stdafx.h"
 #include "BlurEffectSource.h"
+#include "resource.h"
 
 extern "C" __declspec(dllexport) bool LoadPlugin();
 extern "C" __declspec(dllexport) void UnloadPlugin();
@@ -26,9 +27,158 @@ extern "C" __declspec(dllexport) CTSTR GetPluginDescription();
 
 HINSTANCE hinstMain = NULL;
 
+struct SourceConfig
+{
+	XElement* data;
+	CTSTR name;
+};
+
+INT_PTR CALLBACK ConfigureDialogProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch(message)
+	{
+	case WM_INITDIALOG:
+		{
+			SourceConfig* config = (SourceConfig*)lParam;
+			XElement *data = config->data;
+			SetWindowLongPtr(hwnd, DWLP_USER, (LONG_PTR)lParam);
+
+			HWND hwHorizSlider = GetDlgItem(hwnd, IDC_HORIZ_SLIDER);
+			HWND hwVertSlider = GetDlgItem(hwnd, IDC_VERT_SLIDER);
+			HWND hwHorizValueLabel = GetDlgItem(hwnd, IDC_HORIZ_VALUE);
+			HWND hwVertValueLabel = GetDlgItem(hwnd, IDC_VERT_VALUE);
+
+			float horizValue = data->GetFloat(TEXT("horizValue"), 1.0f);
+			SendMessage(hwHorizSlider, TBM_CLEARTICS, FALSE, 0);
+			SendMessage(hwHorizSlider, TBM_SETRANGE, FALSE, MAKELPARAM(1, 100));
+			SendMessage(hwHorizSlider, TBM_SETTIC, 0, 10);
+			SendMessage(hwHorizSlider, TBM_SETPOS, TRUE, (int)(horizValue * 10));
+			SetWindowText(hwHorizValueLabel, FormattedString(TEXT("%.01f"), horizValue));
+			
+			float vertValue = data->GetFloat(TEXT("vertValue"), 1.0f);
+			SendMessage(hwVertSlider, TBM_CLEARTICS, FALSE, 0);
+			SendMessage(hwVertSlider, TBM_SETRANGE, FALSE, MAKELPARAM(1, 100));
+			SendMessage(hwVertSlider, TBM_SETTIC, 0, 10);
+			SendMessage(hwVertSlider, TBM_SETPOS, TRUE, (int)(vertValue * 10));
+			SetWindowText(hwVertValueLabel, FormattedString(TEXT("%.01f"), vertValue));
+
+			return TRUE;
+		}
+	case WM_HSCROLL:
+		{
+			switch (GetDlgCtrlID((HWND)lParam))
+			{
+			case IDC_HORIZ_SLIDER:
+				{
+					HWND hwHorizSlider = GetDlgItem(hwnd, IDC_HORIZ_SLIDER);
+					HWND hwHorizValueLabel = GetDlgItem(hwnd, IDC_HORIZ_VALUE);
+
+					float horizValue = (float)SendMessage(hwHorizSlider, TBM_GETPOS, 0, 0) / 10.0f;
+					SetWindowText(hwHorizValueLabel, FormattedString(TEXT("%.01f"), horizValue));
+
+					SourceConfig* config = (SourceConfig*)GetWindowLongPtr(hwnd, DWLP_USER);
+					ImageSource* source = API->GetSceneImageSource(config->name);
+					source->SetFloat(TEXT("horizValue"), horizValue);
+					break;
+				}
+			case IDC_VERT_SLIDER:
+				{
+					HWND hwVertSlider = GetDlgItem(hwnd, IDC_VERT_SLIDER);
+					HWND hwVertValueLabel = GetDlgItem(hwnd, IDC_VERT_VALUE);
+
+					float vertValue = (float)SendMessage(hwVertSlider, TBM_GETPOS, 0, 0) / 10.0f;
+					SetWindowText(hwVertValueLabel, FormattedString(TEXT("%.01f"), vertValue));
+
+					SourceConfig* config = (SourceConfig*)GetWindowLongPtr(hwnd, DWLP_USER);
+					ImageSource* source = API->GetSceneImageSource(config->name);
+					source->SetFloat(TEXT("vertValue"), vertValue);
+					break;
+				}
+			}
+		}
+		break;
+
+	case WM_COMMAND:
+		{
+			switch (LOWORD(wParam))
+			{
+			case IDOK:
+				{
+					HWND hwHorizSlider = GetDlgItem(hwnd, IDC_HORIZ_SLIDER);
+					HWND hwVertSlider = GetDlgItem(hwnd, IDC_VERT_SLIDER);
+					float horizValue = (float)SendMessage(hwHorizSlider, TBM_GETPOS, 0, 0) / 10.0f;
+					float vertValue = (float)SendMessage(hwVertSlider, TBM_GETPOS, 0, 0) / 10.0f;
+
+					SourceConfig* config = (SourceConfig*)GetWindowLongPtr(hwnd, DWLP_USER);
+					XElement* data = config->data;
+					data->SetFloat(TEXT("horizValue"), horizValue);
+					data->SetFloat(TEXT("vertValue"), vertValue);
+					
+
+					EndDialog(hwnd, LOWORD(wParam));
+				}
+				break;
+
+			case IDCANCEL:
+				{
+					SourceConfig* config = (SourceConfig*)GetWindowLongPtr(hwnd, DWLP_USER);
+					XElement* data = config->data;
+					data->SetFloat(TEXT("horizValue"), data->GetFloat(TEXT("horizValue"), 1.0f));
+					data->SetFloat(TEXT("vertValue"), data->GetFloat(TEXT("vertValue"), 1.0f));
+					
+					ImageSource* source = API->GetSceneImageSource(config->name);
+					source->SetFloat(TEXT("horizValue"), data->GetFloat(TEXT("horizValue"), 1.0f));
+					source->SetFloat(TEXT("vertValue"), data->GetFloat(TEXT("vertValue"), 1.0f));
+
+					EndDialog(hwnd, LOWORD(wParam));
+				}
+				break;
+			}
+		}
+		break;
+
+	case WM_CLOSE:
+		{
+			EndDialog(hwnd, IDCANCEL);
+		}
+		break;
+	}
+
+	return 0;
+}
+
 bool STDCALL ConfigureBlurEffectSource(XElement *element, bool bCreating)
 {
-    return true;
+	if (!element)
+	{
+		AppWarning(TEXT("ConfigureBlurEffectSource: NULL element"));
+		return false;
+	}
+
+	SourceConfig config;
+	XElement* data = element->GetElement(TEXT("data"));
+	if (!data)
+	{
+		data = element->CreateElement(TEXT("data"));
+	}
+	config.data = data;
+	config.name = element->GetName();
+
+	if (DialogBoxParam(
+			hinstMain, 
+			MAKEINTRESOURCE(IDD_CONFIG), 
+			API->GetMainWindow(), 
+			ConfigureDialogProc, 
+			(LPARAM)&config) == IDOK)
+	{
+        UINT width, height;
+        API->GetBaseSize(width, height);
+		element->SetInt(TEXT("cx"), width);
+		element->SetInt(TEXT("cy"), height);
+		return true;
+	}
+
+    return false;
 }
 
 ImageSource* STDCALL CreateBlurEffectSource(XElement *data)

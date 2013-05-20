@@ -22,13 +22,18 @@
 
 bool BlurEffectSource::Init(XElement* data)
 {
+	this->data = data;
+
+	horizValue = data->GetFloat(TEXT("horizValue"), 1.0f);
+	vertValue = data->GetFloat(TEXT("vertValue"), 1.0f);
+
 	baseSize = OBSGetBaseSize();
 	texture = CreateTexture((UINT)baseSize.x, (UINT)baseSize.y, GS_BGRA, NULL, FALSE, TRUE);
 	
 	horizontalBlurShader = CreatePixelShaderFromFile(TEXT("plugins/BlurPlugin/h_blur.hlsl"));
 	verticalBlurShader = CreatePixelShaderFromFile(TEXT("plugins/BlurPlugin/v_blur.hlsl"));
-	horizontalBlurShader->SetFloat(horizontalBlurShader->GetParameterByName(TEXT("width")), baseSize.x);
-	verticalBlurShader->SetFloat(verticalBlurShader->GetParameterByName(TEXT("height")), baseSize.y);
+	//horizontalBlurShader->SetFloat(horizontalBlurShader->GetParameterByName(TEXT("width")), baseSize.x);
+	//verticalBlurShader->SetFloat(verticalBlurShader->GetParameterByName(TEXT("height")), baseSize.y);
 
     Log(TEXT("Using blur effect plugin"));
 
@@ -50,6 +55,14 @@ void BlurEffectSource::Render(const Vect2 &pos, const Vect2 &size)
 
 	if (verticalBlurShader && horizontalBlurShader)
 	{
+		
+		horizontalBlurShader->SetFloat(
+			horizontalBlurShader->GetParameterByName(TEXT("width")),
+			baseSize.x / horizValue);
+		verticalBlurShader->SetFloat(
+			verticalBlurShader->GetParameterByName(TEXT("height")), 
+			baseSize.y / vertValue);
+
 		float x = pos.x;
 		float y = pos.y;
 		float x2 = (x + size.x);
@@ -80,4 +93,16 @@ void BlurEffectSource::Render(const Vect2 &pos, const Vect2 &size)
 Vect2 BlurEffectSource::GetSize() const
 {
 	return API->GetBaseSize();
+}
+
+void BlurEffectSource::SetFloat(CTSTR lpName, float fVal)
+{
+	if (scmpi(lpName, TEXT("vertValue")) == 0)
+    {
+		vertValue = fVal;
+    }
+	else if (scmpi(lpName, TEXT("horizValue")) == 0)
+	{
+		horizValue = fVal;
+	}
 }

@@ -25,6 +25,10 @@ class BlurEffectSource :
 	Shader* verticalBlurShader;
 	Shader* horizontalBlurShader;
 	Vect2 baseSize;
+	XElement* data;
+
+	float vertValue;
+	float horizValue;
 
 public:
 	bool Init(XElement* data);
@@ -32,5 +36,7 @@ public:
 
 	void Render(const Vect2 &pos, const Vect2 &size);
 	Vect2 GetSize() const;
+
+	void SetFloat(CTSTR lpName, float fVal);
 };
 
