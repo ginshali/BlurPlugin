@@ -1,4 +1,4 @@
-BlurPlugin for Open Broadcaster Software version alpha
+BlurPlugin version Alpha for Open Broadcaster Software
 Copyright (C) 2013 Ginshali.info
 
 * This plugin needs to use with modified version of OBS.
