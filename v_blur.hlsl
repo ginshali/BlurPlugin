@@ -27,22 +27,22 @@ SamplerState textureSampler
 };
 
 struct VS_OUT {
-   float4 pos : POSITION;
-   float2 uv : TEXCOORD0;
+    float4 pos : POSITION;
+    float2 uv : TEXCOORD0;
 };
 
 float4 main(VS_OUT input) : SV_TARGET
 {
-	const float weights[11] = { 0.01, 0.05, 0.09, 0.12, 0.15, 0.16, 0.15, 0.12, 0.09, 0.05, 0.01 };
-	const float delta_v[11] = { -5.0, -4.0, -3.0, -2.0, -1.0,  0.0,  1.0,  2.0,  3.0,  4.0,  5.0 };
-	
-	float size = 1.0 / height;
-	float4 color = float4(0.0, 0.0, 0.0, 0.0);
+    const float weights[11] = { 0.01, 0.05, 0.09, 0.12, 0.15, 0.16, 0.15, 0.12, 0.09, 0.05, 0.01 };
+    const float delta_v[11] = { -5.0, -4.0, -3.0, -2.0, -1.0,  0.0,  1.0,  2.0,  3.0,  4.0,  5.0 };
+    
+    float size = 1.0 / height;
+    float4 color = float4(0.0, 0.0, 0.0, 0.0);
 
-	for (uint i = 0; i < 11; i++)
-	{
-		color += diffuseTexture.Sample(textureSampler, float2(input.uv.x, input.uv.y + delta_v[i] * size)) * weights[i];
-	}
+    for (uint i = 0; i < 11; i++)
+    {
+        color += diffuseTexture.Sample(textureSampler, float2(input.uv.x, input.uv.y + delta_v[i] * size)) * weights[i];
+    }
 
-	return float4(color.r, color.g, color.b, 1.0);
+    return float4(color.r, color.g, color.b, 1.0);
 }
