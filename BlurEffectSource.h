@@ -19,24 +19,24 @@
 #pragma once
 
 class BlurEffectSource :
-	public ImageSource
+    public EffectSource
 {
-	Texture* texture;
-	Shader* verticalBlurShader;
-	Shader* horizontalBlurShader;
-	Vect2 baseSize;
-	XElement* data;
+    Vect2 baseSize;
+    XElement* data;
 
-	float vertValue;
-	float horizValue;
+    Effect* horizontalBlurEffect;
+    Effect* verticalBlurEffect;
+
+    float vertValue;
+    float horizValue;
 
 public:
-	bool Init(XElement* data);
-	~BlurEffectSource();
+    bool Init(XElement* data);
+    ~BlurEffectSource();
 
-	void Render(const Vect2 &pos, const Vect2 &size);
-	Vect2 GetSize() const;
+    void BeforeRender(const Vect2 &pos, const Vect2 &size);
+    Vect2 GetSize() const;
 
-	void SetFloat(CTSTR lpName, float fVal);
+    void SetFloat(CTSTR lpName, float fVal);
 };
 

@@ -18,91 +18,83 @@
 
 #include "stdafx.h"
 #include "BlurEffectSource.h"
+#include <string>
 
+#define VERT_EFFECT_NAME "VerticalEffect"
+#define HORIZ_EFFECT_NAME "HorizontalEffect"
 
 bool BlurEffectSource::Init(XElement* data)
 {
-	this->data = data;
+    this->data = data;
 
-	horizValue = data->GetFloat(TEXT("horizValue"), 1.0f);
-	vertValue = data->GetFloat(TEXT("vertValue"), 1.0f);
+    horizValue = data->GetFloat(TEXT("horizValue"), 1.0f);
+    vertValue = data->GetFloat(TEXT("vertValue"), 1.0f);
 
-	baseSize = OBSGetBaseSize();
-	texture = CreateTexture((UINT)baseSize.x, (UINT)baseSize.y, GS_BGRA, NULL, FALSE, TRUE);
-	
-	horizontalBlurShader = CreatePixelShaderFromFile(TEXT("plugins/BlurPlugin/h_blur.hlsl"));
-	verticalBlurShader = CreatePixelShaderFromFile(TEXT("plugins/BlurPlugin/v_blur.hlsl"));
-	//horizontalBlurShader->SetFloat(horizontalBlurShader->GetParameterByName(TEXT("width")), baseSize.x);
-	//verticalBlurShader->SetFloat(verticalBlurShader->GetParameterByName(TEXT("height")), baseSize.y);
+    baseSize = OBSGetBaseSize();
+    
+    Shader* horizontalBlurShader = CreatePixelShaderFromFile(TEXT("plugins/BlurPlugin/h_blur.hlsl"));
+    Shader* verticalBlurShader = CreatePixelShaderFromFile(TEXT("plugins/BlurPlugin/v_blur.hlsl"));
+
+    horizontalBlurEffect = new Effect(horizontalBlurShader, 0.0f, 0.0f, baseSize.x, baseSize.y);
+    verticalBlurEffect = new Effect(verticalBlurShader, 0.0f, 0.0f, baseSize.x, baseSize.y);
+    
+    AddEffect(HORIZ_EFFECT_NAME, horizontalBlurEffect);
+    AddEffect(VERT_EFFECT_NAME, verticalBlurEffect);
 
     Log(TEXT("Using blur effect plugin"));
 
-	return true;
+    return true;
 }
 
 BlurEffectSource::~BlurEffectSource()
 {
-	delete verticalBlurShader;
-	delete horizontalBlurShader;
-	delete texture;
 }
 
 
-void BlurEffectSource::Render(const Vect2 &pos, const Vect2 &size)
+void BlurEffectSource::BeforeRender(const Vect2 &pos, const Vect2 &size)
 {
-	Shader* oldShader = GetCurrentPixelShader();
-	SamplerState* sampler = NULL;
+    if (horizValue > 0.0f)
+    {
+        horizontalBlurEffect->enabled = true;
+        horizontalBlurEffect->shader->SetFloat(
+            horizontalBlurEffect->shader->GetParameterByName(TEXT("width")),
+            baseSize.x / horizValue);
+        horizontalBlurEffect->pos = pos;
+        horizontalBlurEffect->size = size;
+    }
+    else
+    {
+        horizontalBlurEffect->enabled = false;
+    }
 
-	if (verticalBlurShader && horizontalBlurShader)
-	{
-		
-		horizontalBlurShader->SetFloat(
-			horizontalBlurShader->GetParameterByName(TEXT("width")),
-			baseSize.x / horizValue);
-		verticalBlurShader->SetFloat(
-			verticalBlurShader->GetParameterByName(TEXT("height")), 
-			baseSize.y / vertValue);
-
-		float x = pos.x;
-		float y = pos.y;
-		float x2 = (x + size.x);
-		float y2 = (y + size.y);
-		float u = x / baseSize.x;
-		float v = y / baseSize.y;
-		float u2 = x2 / baseSize.x;
-		float v2 = y2 / baseSize.y;
-		
-		// get render target
-		Texture* renderTarget = GetRenderTarget();
-		
-		// apply vertex blur effect
-		GS->CopyTexture(texture, renderTarget);
-		LoadPixelShader(verticalBlurShader);
-		DrawSpriteEx(texture, 0xFFFFFFFF, x, y, x2, y2, u, v, u2, v2);
-
-		// apply vertex blur effect
-		GS->CopyTexture(texture, renderTarget);
-		LoadPixelShader(horizontalBlurShader);
-		DrawSpriteEx(texture, 0xFFFFFFFF, x, y, x2, y2, u, v, u2, v2);
-
-		// restore shader
-		LoadPixelShader(oldShader);
-	}
+    if (vertValue > 0.0f)
+    {
+        verticalBlurEffect->enabled = true;
+        verticalBlurEffect->shader->SetFloat(
+            verticalBlurEffect->shader->GetParameterByName(TEXT("height")),
+            baseSize.y / vertValue);
+        verticalBlurEffect->pos = pos;
+        verticalBlurEffect->size = size;
+    }
+    else
+    {
+        verticalBlurEffect->enabled = false;
+    }
 }
 
 Vect2 BlurEffectSource::GetSize() const
 {
-	return API->GetBaseSize();
+    return API->GetBaseSize();
 }
 
 void BlurEffectSource::SetFloat(CTSTR lpName, float fVal)
 {
-	if (scmpi(lpName, TEXT("vertValue")) == 0)
+    if (scmpi(lpName, TEXT("vertValue")) == 0)
     {
-		vertValue = fVal;
+        vertValue = fVal;
     }
-	else if (scmpi(lpName, TEXT("horizValue")) == 0)
-	{
-		horizValue = fVal;
-	}
+    else if (scmpi(lpName, TEXT("horizValue")) == 0)
+    {
+        horizValue = fVal;
+    }
 }
